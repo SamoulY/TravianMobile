@@ -9,7 +9,8 @@
         android:id="@+id/etInput1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ems="10" >
+        android:ems="10"
+        android:text="chabingba" >
     </EditText>
 
     <EditText
@@ -17,20 +18,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:ems="10"
-        android:inputType="textPassword" >
+        android:inputType="textPassword"
+        android:text="123456123" >
     </EditText>
-
-    <TextView
-        android:id="@+id/tvParsed"
-        android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:text="Loading..." />
 
     <Button
         android:id="@+id/bLogin"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Login" >
-    </Button>
+        android:text="Login" />
+
+    <ScrollView
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent" >
+
+        <TextView
+            android:id="@+id/tvParsed"
+            android:layout_width="fill_parent"
+            android:layout_height="match_parent"
+            android:text="Loading..." />
+    </ScrollView>
 
 </LinearLayout>

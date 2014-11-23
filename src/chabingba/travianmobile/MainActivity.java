@@ -1,112 +1,193 @@
 package chabingba.travianmobile;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.List;
 
+import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.StatusLine;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
+import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements OnClickListener {
 
-	TextView tvData1, tvParsed;
-	HttpClient client;
-	final static String url = "http://ts1.travian.de";
-	WebView webView;
-	WebSettings settings;
-	Uri uri = Uri.parse(url);
+	int statusCode = 0, flagExecute = 0;
+	TextView tvParsed;
 	Intent intent1;
-	Document doc;
 	EditText etInput1, etInput2;
-	String nameString = "";
-	Element loginName;
-	Button login;
+	String name = "", password = "", line = "", newLine = System
+			.getProperty("line.separator"), data = "", error = "",
+			url = "http://ts1.travian.de/login.php";
+	Button bLogin;
+	HttpClient client;
+	HttpPost post;
+	HttpResponse response;
+	List<NameValuePair> urlParameters;
+	BufferedReader bufferedReader;
+	StringBuffer stringBuffer = new StringBuffer("");
+	Context mainContext;
+	StatusLine statusLine;
+	List<NameValuePair> postData;
+	BasicNameValuePair namePair, passwordPair;
+	UrlEncodedFormEntity urlEncodedFormEntity;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main_layout);
 
+		init();
+		mainContext = this;
+	}
+
+	public void init() {
 		etInput1 = (EditText) findViewById(R.id.etInput1);
 		etInput2 = (EditText) findViewById(R.id.etInput2);
-		login = (Button) findViewById(R.id.bLogin);
+		tvParsed = (TextView) findViewById(R.id.tvParsed);
+		bLogin = (Button) findViewById(R.id.bLogin);
+		bLogin.setOnClickListener(this);
 
-		login.setOnClickListener(new View.OnClickListener() {
+		name = etInput1.getText().toString().trim();
+		password = etInput2.getText().toString().trim();
 
-			@Override
-			public void onClick(View v) {
-				// TODO Auto-generated method stub
+		namePair = new BasicNameValuePair("name", name);
+		passwordPair = new BasicNameValuePair("password", password);
+	}
 
-				ArrayList<NameValuePair> postParameters = new ArrayList<NameValuePair>();
-				postParameters.add(new BasicNameValuePair("username", etInput1
-						.getText().toString()));
-				postParameters.add(new BasicNameValuePair("password", etInput2
-						.getText().toString()));
+	public void postLoginData() {
+		client = new DefaultHttpClient();
 
-				String response = null;
-				try {
-					response = CustomHttpClient.executeHttpPost(
-							"http://ts1.travian.de/login.php", postParameters);
-					String res = response.toString();
-					res = res.replaceAll("\\s+", "");
-					if (res.equals("1"))
-						tvData1.setText("Correct Username or Password");
-					else
-						tvData1.setText("Sorry!! Incorrect Username or Password");
-				} catch (Exception e) {
-					etInput1.setText(e.toString());
-				}
+		post = new HttpPost(url);
 
+		postData = new ArrayList<NameValuePair>();
+		postData.add(namePair);
+		postData.add(passwordPair);
+
+		try {
+			urlEncodedFormEntity = new UrlEncodedFormEntity(postData);
+			post.setEntity(urlEncodedFormEntity);
+			response = client.execute(post);
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("ENTITY_TAG", error);
+		} catch (ClientProtocolException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("EXECUTE_TAG", error);
+		} catch (IOException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("EXECUTE_TAG2", error);
+		}
+
+		try {
+			bufferedReader = new BufferedReader(new InputStreamReader(response
+					.getEntity().getContent()));
+		} catch (IllegalStateException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("BUFFEREDREADER_TAG", error);
+		} catch (IOException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("BUFFEREDREADER_TAG2", error);
+		}
+	}
+
+	private void getPostData(BufferedReader bufferedReader1) {
+		try {
+			while ((line = bufferedReader1.readLine()) != null) {
+				stringBuffer.append(line + newLine);
 			}
-		});
+		} catch (IOException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("BUFREADER_APPEND", error);
+		}
 
-		//
-		// try {
-		// doc = Jsoup.connect(url).get();
-		// } catch (IOException e) {
-		// e.printStackTrace();
-		// }
-		//
-		// String parsed = doc.select("tr").text();
-		// tvParsed = (TextView) findViewById(R.id.tvParsed);
-		// tvParsed.setText(parsed);
+		try {
+			bufferedReader1.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			error = e.toString();
+			Log.v("BUFREADER_CLOSE2", error);
+		}
+		data = stringBuffer.toString();
+	}
 
-		// etInput1 = (EditText) findViewById(R.id.etInput1);
-		// nameString = etInput1.toString();
-		//
-		// loginName = doc.getElementById("name");
-		// loginName.appendText(nameString);
-		//
+	@Override
+	public void onClick(View v) {
+		switch (v.getId()) {
+		case R.id.bLogin:
+			new TravianAsync().execute();
+			break;
+		}
+	}
 
-		/*
-		 * intent1 = new Intent(Intent.ACTION_VIEW, uri);
-		 * startActivity(intent1);
-		 */
+	private class TravianAsync extends AsyncTask<Void, Void, Void> {
+		ProgressDialog progressDialog;
 
-		// webView = (WebView) findViewById(R.id.wView); settings =
-		// webView.getSettings(); settings.setJavaScriptEnabled(true);
-		// webView.loadUrl(url);
+		@Override
+		protected void onPreExecute() {
+			super.onPreExecute();
+			progressDialog = new ProgressDialog(MainActivity.this);
+			progressDialog.setTitle("Trying to login...");
+			progressDialog.show();
+		}
 
-		// tvData1 = (TextView) findViewById(R.id.tvData1);
-		// GetData test = new GetData();
-		// try {
-		// String returned = test.getD();
-		// tvData1.setText(returned);
-		// } catch (Exception a) {
-		// a.printStackTrace();
-		// }
+		@Override
+		protected void onPostExecute(Void result) {
+			progressDialog.dismiss();
+			super.onPostExecute(result);
+		}
+
+		@Override
+		protected Void doInBackground(Void... params) {
+			postLoginData();
+			publishProgress();
+			return null;
+		}
+
+		@Override
+		protected void onProgressUpdate(Void... values) {
+			super.onProgressUpdate(values);
+			getPostData(bufferedReader);
+			try {
+				bufferedReader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+				error = e.toString();
+				Log.v("BUFREADER_CLOSE", error);
+			}
+
+			if (data.contains("login"))
+				tvParsed.setText("Pak greda...");
+			else
+				tvParsed.setText("Ti si genii!!!");
+
+		}
 
 	}
 
