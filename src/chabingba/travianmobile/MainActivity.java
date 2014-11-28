@@ -17,28 +17,38 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.Toast;
 
+//import android.widget.TextView;
+
+@SuppressLint("SetJavaScriptEnabled")
 public class MainActivity extends Activity implements OnClickListener {
 
-	int statusCode = 0, flagExecute = 0;
-	TextView tvParsed;
+	int errorNumber = 0;
+	// TextView tvParsed;
 	Intent intent1;
 	EditText etInput1, etInput2;
 	String name = "", password = "", line = "", newLine = System
 			.getProperty("line.separator"), data = "", error = "",
-			url = "http://ts1.travian.de/login.php";
+			url = "http://ts1.travian.de/login.php", webData = "";
 	Button bLogin;
 	HttpClient client;
 	HttpPost post;
@@ -51,6 +61,8 @@ public class MainActivity extends Activity implements OnClickListener {
 	List<NameValuePair> postData;
 	BasicNameValuePair namePair, passwordPair;
 	UrlEncodedFormEntity urlEncodedFormEntity;
+	WebView wvTest;
+	WebSettings webSettings;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -59,23 +71,68 @@ public class MainActivity extends Activity implements OnClickListener {
 
 		init();
 		mainContext = this;
+
+		if (isConnected()) {
+			// tvParsed.setText("Connection successfull.");
+		} else {
+			errorNumber = 1;
+			Greda(errorNumber);
+		}
+
 	}
 
 	public void init() {
+		// Инициализиране на променливите.
+
 		etInput1 = (EditText) findViewById(R.id.etInput1);
 		etInput2 = (EditText) findViewById(R.id.etInput2);
-		tvParsed = (TextView) findViewById(R.id.tvParsed);
+		// tvParsed = (TextView) findViewById(R.id.tvParsed);
 		bLogin = (Button) findViewById(R.id.bLogin);
 		bLogin.setOnClickListener(this);
+		wvTest = (WebView) findViewById(R.id.wvTest);
+		webSettings = wvTest.getSettings();
+		webSettings.setJavaScriptEnabled(true);
 
-		name = etInput1.getText().toString().trim();
-		password = etInput2.getText().toString().trim();
+	}
 
-		namePair = new BasicNameValuePair("name", name);
-		passwordPair = new BasicNameValuePair("password", password);
+	private void Greda(int errorNumber2) {
+		// Финкция за съобщения за грешка.
+		switch (errorNumber2) {
+		case 1:
+			AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(
+					mainContext);
+			alertDialogBuilder.setTitle("No internet connection.");
+			alertDialogBuilder
+					.setMessage("No internet connection. Please try to connect to a network.");
+			alertDialogBuilder.setCancelable(false);
+			alertDialogBuilder.setPositiveButton("Exit",
+					new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int id) {
+							// if this button is clicked, close
+							// current activity
+							MainActivity.this.finish();
+						}
+					});
+			AlertDialog alertDialog = alertDialogBuilder.create();
+			alertDialog.show();
+			break;
+		}
+	}
+
+	public boolean isConnected() {
+		// Проверка дали сме се свързали.
+
+		ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Activity.CONNECTIVITY_SERVICE);
+		NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+		if (networkInfo != null && networkInfo.isConnected())
+			return true;
+		else
+			return false;
 	}
 
 	public void postLoginData() {
+		// Въвеждане на информацията за акаунта във формата.
+
 		client = new DefaultHttpClient();
 
 		post = new HttpPost(url);
@@ -117,6 +174,8 @@ public class MainActivity extends Activity implements OnClickListener {
 	}
 
 	private void getPostData(BufferedReader bufferedReader1) {
+		// Четене на иформацията, върната от заявката.
+
 		try {
 			while ((line = bufferedReader1.readLine()) != null) {
 				stringBuffer.append(line + newLine);
@@ -142,11 +201,18 @@ public class MainActivity extends Activity implements OnClickListener {
 		switch (v.getId()) {
 		case R.id.bLogin:
 			new TravianAsync().execute();
+			name = etInput1.getText().toString().trim();
+			password = etInput2.getText().toString().trim();
+
+			namePair = new BasicNameValuePair("name", name);
+			passwordPair = new BasicNameValuePair("password", password);
 			break;
 		}
 	}
 
 	private class TravianAsync extends AsyncTask<Void, Void, Void> {
+		// Нова нишка, в която се прави входа.
+
 		ProgressDialog progressDialog;
 
 		@Override
@@ -159,8 +225,12 @@ public class MainActivity extends Activity implements OnClickListener {
 
 		@Override
 		protected void onPostExecute(Void result) {
-			progressDialog.dismiss();
 			super.onPostExecute(result);
+			progressDialog.dismiss();
+			Toast.makeText(MainActivity.this, "Finished", Toast.LENGTH_LONG)
+					.show();
+			// intent1 = new Intent(mainContext, SecondScreen.class);
+			// startActivity(intent1);
 		}
 
 		@Override
@@ -182,10 +252,16 @@ public class MainActivity extends Activity implements OnClickListener {
 				Log.v("BUFREADER_CLOSE", error);
 			}
 
-			if (data.contains("login"))
-				tvParsed.setText("Pak greda...");
-			else
-				tvParsed.setText("Ti si genii!!!");
+			webData = data;
+			webData = webData.replace("#", "%23");
+			webData = webData.replace("%", "%25");
+			webData = webData.replace("\\", "%27");
+			webData = webData.replace("?", "%3f");
+			wvTest.loadDataWithBaseURL(url, webData, "text/html", "UTF-8", url);
+			// if (data.contains("login"))
+			// tvParsed.setText(data);
+			// else
+			// tvParsed.setText(data);
 
 		}
 
